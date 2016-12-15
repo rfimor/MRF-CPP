@@ -13,15 +13,13 @@ class AlphaExpansion
 		const double EPS;
 
 		AlphaExpansion(int width, int length, int height, int *image, int nlabels, double **nbCost, double **priorCost);
-		AlphaExpansion(int width, int length, int height, int *image, int nlabels, int baseLevel, double scale, int *priorImage, double (*nbCost)(int, int), double (*priorCost)(int, int), double priorStrength);
+		AlphaExpansion(int width, int length, int height, int *image, int nlabels, int *priorImage, double (*nbCost)(int, int), double (*priorCost)(int, int), double priorStrength);
 		~AlphaExpansion();
 
 		double OneMove(int expandLabel);
 		int* GetUpdate();
 		double GetEnergy();
 		int Expansion(int minRounds, int maxRounds, long int seed, double &oldEnergy, double &energy);
-
-		static void ScaleImage(int *image, int length, int &nlabel, double &scale, int &baselevel);
 
 	private:
 		Lattice *lat;
@@ -33,11 +31,12 @@ class AlphaExpansion
 		double **priorCost;
 		bool selfCreatedCost;
 
-		int scaleBack(int x, double scale, int base) {
-			double s = x / scale + base;
-			int r = (int)s;
-			return r >= s - 0.5 ? (r + 1) :r;
-		}
+		int baseLevel;
+		double scale;
+		bool isScaled;
+
+		void scaleImage(int *image, int length);
+		int scaleBack(int x);
 };
 
 #endif

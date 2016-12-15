@@ -17,31 +17,36 @@ AlphaExpansion::AlphaExpansion(int width, int length, int height, int *image, in
 
 	newImage = new int[lat->SIZE];
 	for (int i=0; i<lat->SIZE; i++) newImage[i] = image[i];
+
+	isScaled = false;
 }
 
-//values in "labels" must be from 0 to nlabel - 1, baseLevel should be higher than 1
-//"Image" is scaled to [0, nlabel-1]. "priorImage" is not scaled
-AlphaExpansion::AlphaExpansion(int width, int length, int height, int *image, int nlabels, int baseLevel, double scale, int *priorImage, double (*nbCost)(int, int), double (*priorCost)(int, int), double priorStrength) 
+//"Image" is scaled to "newImage" with pixel values in [0, nlabel-1]. "priorImage" is not scaled
+AlphaExpansion::AlphaExpansion(int width, int length, int height, int *image, int nlabels, int *priorImage, double (*nbCost)(int, int), double (*priorCost)(int, int), double priorStrength) 
 	: W(width), L(length), H(height), EPS(1e-8) {
 	lat = new Lattice(width, length, height, false);
 
 	nlabel = nlabels;
 	this->image = image;
 
+	newImage = new int[lat->SIZE];
+	for (int i=0; i<lat->SIZE; i++) newImage[i] = image[i];
+
+	scaleImage(newImage, lat->SIZE);
+
 	make2DArray(this->nbCost, nlabel, nlabel);
 	make2DArray(this->priorCost, nlabel, lat->SIZE);
 
+	selfCreatedCost = true;
+
 	for (int i=0; i < nlabel; i++) {
 		for (int j=0; j < nlabel; j++) {
-			this->nbCost[i][j] = nbCost(scaleBack(i, scale, baseLevel),scaleBack(j, scale, baseLevel));
+			this->nbCost[i][j] = nbCost(scaleBack(i),scaleBack(j));
 		}
 		for (int j=0; j < lat->SIZE; j++) {
-			this->priorCost[i][j] = priorStrength * priorCost(scaleBack(i, scale, baseLevel), priorImage[j]);
+			this->priorCost[i][j] = priorStrength * priorCost(scaleBack(i), priorImage[j]);
 		}
 	}
-
-	newImage = new int[lat->SIZE];
-	for (int i=0; i<lat->SIZE; i++) newImage[i] = image[i];
 }
 
 AlphaExpansion::~AlphaExpansion() {
@@ -54,7 +59,11 @@ AlphaExpansion::~AlphaExpansion() {
 }
 
 int* AlphaExpansion::GetUpdate() {
-	return newImage;
+	int* result = new int[lat->SIZE];
+	for (int i=0; i<lat->SIZE; i++) {
+		result[i] = scaleBack(newImage[i]);
+	}
+	return result;
 }
 
 double AlphaExpansion::GetEnergy() {
@@ -118,7 +127,7 @@ int AlphaExpansion::Expansion(int minRounds, int maxRounds, long int seed, doubl
 	return cnt;
 }
 
-void AlphaExpansion::ScaleImage(int *image, int length, int &nlabel, double &scale, int &baselevel) {
+void AlphaExpansion::scaleImage(int *image, int length) {
 	int max = image[0];
 	int min = max;
 	for (int i=1; i<length; i++) {
@@ -128,12 +137,20 @@ void AlphaExpansion::ScaleImage(int *image, int length, int &nlabel, double &sca
 
 	if ((max - min) < nlabel) {
 		nlabel = max - min + 1;
-		baselevel = min;
+		baseLevel = min;
 		scale = 1;
-		for (int i=1; i<length; i++) image[i] -= min;
+		for (int i=0; i<length; i++) image[i] -= min;
 	} else {
 		scale = (double)(nlabel - 1) / (max - min);
-		for (int i=1; i<length; i++) image[i] = (int)((image[i] - min) * scale);
-		baselevel = min;
+		for (int i=0; i<length; i++) image[i] = (int)((image[i] - min) * scale);
+		baseLevel = min;
 	}
+	isScaled = true;
+}
+
+int AlphaExpansion::scaleBack(int x) {
+	if (!isScaled) return x;
+	double s = x / scale + baseLevel;
+	int r = (int)s;
+	return r >= s - 0.5 ? (r + 1) : r;
 }

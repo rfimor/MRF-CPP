@@ -11,6 +11,7 @@ double *rndField = NULL;
 AlphaExpansion *alpha = NULL;
 int *image = NULL;
 int *priorImage = NULL;
+int *resultImage = NULL;
 
 MRF_API void CreateLattice(int width, int length, int height, bool periodic);
 MRF_API void InitializeLattice(int* initLabel, int expandLabel, double **nbCost, double **priorCost);
@@ -73,6 +74,8 @@ void CleanUp() {
 	alpha = NULL;
 	delete priorImage;
 	priorImage = NULL;
+	delete resultImage;
+	resultImage = NULL;
 }
 
 void InitializeLatticeRFIM(long int seed, double delta, double hfield) {
@@ -118,14 +121,14 @@ double GetIsingMagnetization() {
 int* AlphaExpansionPoisson(int width, int length, int height, double prioStrength, int nlabel, double &oldEnergy, double &newEnergy, int &nMoves) {
 	if (alpha != NULL) delete alpha;
 
-	double scale;
-	int baselevel;
-
-	AlphaExpansion::ScaleImage(image, width*length*height, nlabel, scale, baselevel);
-
-	alpha = new AlphaExpansion(width, length, height, image, nlabel, baselevel, scale, priorImage, poissonProbEst, poissonProb, prioStrength);
+	alpha = new AlphaExpansion(width, length, height, image, nlabel, priorImage, poissonProbEst, poissonProb, prioStrength);
 	nMoves = alpha->Expansion(2, 10, 100, oldEnergy, newEnergy);
-	return alpha->GetUpdate();
+	if (resultImage != NULL) {
+		delete resultImage;
+		resultImage = NULL;
+	}
+	resultImage = alpha->GetUpdate();
+	return resultImage;
 }
 
 int* GetImagePointer(int width, int height) {
