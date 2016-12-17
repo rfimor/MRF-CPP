@@ -21,6 +21,8 @@ class AlphaExpansion
 		double GetEnergy();
 		int Expansion(int minRounds, int maxRounds, long int seed, double &oldEnergy, double &energy);
 
+		void Cancel();
+
 	private:
 		Lattice *lat;
 
@@ -37,6 +39,8 @@ class AlphaExpansion
 
 		void scaleImage(int *image, int length);
 		int scaleBack(int x);
+
+		volatile bool cancelling;
 };
 
 #endif

@@ -96,6 +96,7 @@ double AlphaExpansion::OneMove(int expandLabel) {
 }
 
 int AlphaExpansion::Expansion(int minRounds, int maxRounds, long int seed, double &oldEnergy, double &energy) {
+	cancelling = false;
 	std::set<int> labels;
 
 	long int idum = -seed;
@@ -109,6 +110,7 @@ int AlphaExpansion::Expansion(int minRounds, int maxRounds, long int seed, doubl
 	for (int rd = 0; rd < maxRounds; rd++) {
 		for (int i=0; i<nlabel; i++) labels.insert(i);
 		while (labels.size() > 0) {
+			if (cancelling) return cnt;
 			int pl;
 			do {
 				pl = (int)floor(ran1(&idum) * nlabel);
@@ -153,4 +155,8 @@ int AlphaExpansion::scaleBack(int x) {
 	double s = x / scale + baseLevel;
 	int r = (int)s;
 	return r >= s - 0.5 ? (r + 1) : r;
+}
+
+void AlphaExpansion::Cancel() {
+	cancelling = true;
 }

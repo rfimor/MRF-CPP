@@ -3,6 +3,7 @@
 #include "newLattice.h"
 #include "functions.hpp"
 #include "alphaExpansion.h"
+#include <thread>
 
 #define MRF_API extern "C" __declspec(dllexport) 
 
@@ -12,6 +13,10 @@ AlphaExpansion *alpha = NULL;
 int *image = NULL;
 int *priorImage = NULL;
 int *resultImage = NULL;
+
+int numMove;
+double startEnergy;
+double endEnergy;
 
 MRF_API void CreateLattice(int width, int length, int height, bool periodic);
 MRF_API void InitializeLattice(int* initLabel, int expandLabel, double **nbCost, double **priorCost);
@@ -24,6 +29,8 @@ MRF_API double GetIsingMagnetization();
 MRF_API int* AlphaExpansionPoisson(int width, int length, int height, double prioStrength, int nlabel, double &oldEnergy, double &newEnergy, int &nMoves);
 MRF_API int* GetImagePointer(int width, int height);
 MRF_API int* GetPriorImagePointer(int width, int height);
+MRF_API void Cancel();
+void expansion();
 
 BOOL APIENTRY DllMain( HMODULE hModule,
                        DWORD  ul_reason_for_call,
@@ -122,7 +129,13 @@ int* AlphaExpansionPoisson(int width, int length, int height, double prioStrengt
 	if (alpha != NULL) delete alpha;
 
 	alpha = new AlphaExpansion(width, length, height, image, nlabel, priorImage, poissonProbEst, poissonProb, prioStrength);
-	nMoves = alpha->Expansion(2, 10, 100, oldEnergy, newEnergy);
+	std::thread exp(expansion);
+	exp.join();
+	
+	nMoves = numMove;
+	oldEnergy = startEnergy;
+	newEnergy = endEnergy;
+	
 	if (resultImage != NULL) {
 		delete resultImage;
 		resultImage = NULL;
@@ -141,4 +154,12 @@ int* GetPriorImagePointer(int width, int height) {
 	if (priorImage != NULL) delete priorImage;
 	priorImage = new int[width * height];
 	return priorImage;
+}
+
+void Cancel() {
+	if (alpha != NULL) alpha->Cancel();
+}
+
+void expansion() {
+	numMove = alpha->Expansion(2, 10, 100, startEnergy, endEnergy);
 }
